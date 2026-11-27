@@ -1,1 +1,117 @@
 
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOVA | پیام‌رسان آنلاین</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101522;color:#fff;font-family:Tahoma,Arial}
+header{background:#1c2940;padding:20px;text-align:center}
+header h2{margin:0;color:#64e6cf}
+main{max-width:600px;margin:25px auto;padding:15px}
+.panel{background:#1c2940;padding:18px;border-radius:16px}
+input,button{width:100%;padding:14px;margin:7px 0;border:0;border-radius:10px;font-size:16px}
+input{background:#101522;color:white;border:1px solid #394761}
+button{background:#52d9c0;color:#10202b;font-weight:bold}
+#messages{height:55vh;overflow:auto;background:#101522;padding:12px;border-radius:12px;margin:12px 0}
+.msg{background:#25344d;padding:12px;border-radius:12px;margin:8px 0;overflow-wrap:anywhere}
+.msg b{color:#64e6cf}
+small{color:#aab6c8}
+#chat{display:none}
+#status{text-align:center;color:#64e6cf;margin:10px}
+</style>
+</head>
+<body>
+<header>
+<h2>✦ NOVA</h2>
+ارتباط، بدون مرز
+</header>
+<main>
+<div class="panel" id="login">
+<h3>ورود به گفت‌وگوی آنلاین</h3>
+<input id="name" placeholder="نام شما">
+<input id="room" placeholder="کد اتاق مشترک" value="nova-room">
+<button id="join">ورود به نُوا</button>
+</div>
+
+<div id="chat" class="panel">
+<h3>گفت‌وگوی نُوا ✨</h3>
+<div id="status">در حال اتصال...</div>
+<div id="messages"></div>
+<form id="form">
+<input id="message" placeholder="پیامت را بنویس..." autocomplete="off">
+<button type="submit">ارسال پیام</button>
+</form>
+</div>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const $ = id => document.getElementById(id);
+let myName = "";
+let myRoom = "";
+
+function showMessage(item) {
+  const box = document.createElement("div");
+  box.className = "msg";
+  const title = document.createElement("b");
+  title.textContent = item.name || "کاربر";
+  const content = document.createElement("div");
+  content.textContent = item.text || "";
+  const time = document.createElement("small");
+  time.textContent = item.time || "";
+  box.append(title, content, time);
+  $("messages").appendChild(box);
+  $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+$("join").onclick = () => {
+  myName = $("name").value.trim();
+  myRoom = $("room").value.trim();
+  if (!myName || !myRoom) {
+    alert("نام و کد اتاق را وارد کن");
+    return;
+  }
+  if (!socket.connected) {
+    $("status").textContent = "اتصال برقرار نیست؛ دوباره تلاش کن.";
+    return;
+  }
+  socket.emit("join-room", {name:myName, room:myRoom});
+  $("login").style.display = "none";
+  $("chat").style.display = "block";
+  $("status").textContent = "متصل به نُوا";
+};
+
+socket.on("connect", () => {
+  $("status").textContent = "اتصال به سرور برقرار شد";
+});
+
+socket.on("disconnect", () => {
+  $("status").textContent = "اتصال قطع شد؛ در حال تلاش مجدد...";
+});
+
+socket.on("room-history", items => {
+  $("messages").innerHTML = "";
+  items.forEach(showMessage);
+});
+
+socket.on("chat-message", showMessage);
+
+$("form").onsubmit = event => {
+  event.preventDefault();
+  const text = $("message").value.trim();
+  if (!text) return;
+  if (!socket.connected) {
+    $("status").textContent = "اتصال قطع است";
+    return;
+  }
+  socket.emit("chat-message", {text});
+  $("message").value = "";
+};
+</script>
+</body>
+  </html>
+
